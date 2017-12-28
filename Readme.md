@@ -10,6 +10,6 @@ docker build -t bigdog .
 ### Command to run Alphadog.
 docker run -d --rm --name bigdog --link alphadog -e HOST_COUNT=HostCount -e API_KEY=YourApiKey -e APP_KEY=YourAppKey bigdog
 
-**Note 
-`--link` allows bigdog to call alphadog directly.
+**Note**   
+`--link` allows bigdog to call alphadog directly.  
 `HOST_COUNT` is used to scale the number of hosts a contaner can create.
