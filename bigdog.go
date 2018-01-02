@@ -11,6 +11,7 @@ import (
     "bytes"
     "os"
     "encoding/json"
+    "github.com/DataDog/dd-trace-go/tracer"
 )
 
 const (
@@ -68,16 +69,24 @@ func getJson(url string, target interface{}) error {
 }
 
 func initializeHosts() {
+    // Add Datadog Tracing
+    span := tracer.NewRootSpan("initialize.hosts", "bigdog", "bigdog")
+    defer span.Finish()
+
     //fmt.Fprintf(w, "Creating %s!", r.URL.Path[1:])
     fmt.Println("Building hosts...")
 
     container := &Container{}
     getJson(alphadogApiUrl, container)
-    fmt.Println("ContainerNumber: " + strconv.Itoa(container.Count))
+    fmt.Println("Container Number: " + strconv.Itoa(container.Count))
+    span.SetMeta("container.number", strconv.Itoa(container.Count))
 
     // convert environment variable host count to int
     hostCount,err  := strconv.Atoi(totalHosts)
-    if err != nil {fmt.Println("Error")}
+    if err != nil {
+        fmt.Println("Error")
+        span.SetError(err)
+    }
     
     go func() {
         for i := 0; i < hostCount; i++ {
@@ -86,7 +95,9 @@ func initializeHosts() {
             cp := cloudProviders[rand.Intn(len(cloudProviders))]
             tags := []Tag {Tag{name: "role", value:role}, Tag{name:"cloud_provider", value:cp}}
             newHost := Host{name: name, tags: tags, tagged: false}
-            //fmt.Println(newHost.tags)
+            
+            span.SetMeta("host.name", name)
+
             hosts = append(hosts,newHost)
             go func(host *Host){
                 // Add host tags
@@ -107,13 +118,16 @@ func initializeHosts() {
                 client = &http.Client{}
                 resp, err = client.Do(req)
                 if err != nil {
-                    //panic(err)
+                    span.SetError(err)
                     return
                 }
                 defer resp.Body.Close()   
 
                 fmt.Println("response Status:", resp.Status)
                 fmt.Println("response Headers:", resp.Header)
+
+                span.SetMeta("http.status", resp.Status)
+
                 body, _ := ioutil.ReadAll(resp.Body)
                 fmt.Println("response Body:", string(body))
             }(&newHost)
