@@ -70,7 +70,7 @@ func getJson(url string, target interface{}) error {
 
 func initializeHosts() {
     // Add Datadog Tracing
-    span := tracer.NewRootSpan("initialize.hosts", "bigdog", "bigdog")
+    span := tracer.NewRootSpan("initialize.hosts", "bigdog", "initializeHosts()")
     defer span.Finish()
 
     //fmt.Fprintf(w, "Creating %s!", r.URL.Path[1:])
@@ -125,11 +125,12 @@ func initializeHosts() {
 
                 fmt.Println("response Status:", resp.Status)
                 fmt.Println("response Headers:", resp.Header)
-
                 span.SetMeta("http.status", resp.Status)
 
                 body, _ := ioutil.ReadAll(resp.Body)
                 fmt.Println("response Body:", string(body))
+                span.SetMeta("http.body", string(body))
+
             }(&newHost)
         }
     }()
@@ -150,6 +151,9 @@ func random(min, max int) int {
 
 // Return Host Metrics JSON
 func hostMetrics(host *Host, time int32) string {
+    span := tracer.NewRootSpan("host.metrics", "bigdog", "hostMetrics()")
+    defer span.Finish()
+
     cpu := random(BigDogMinCPU,BigDogMaxCPU)
     disk := random(BigDogMinDisk,BigDogMaxDisk)
     mem := random(BigDogMinMem,BigDogMaxMem)
@@ -186,6 +190,9 @@ func hostMetrics(host *Host, time int32) string {
     ]
     }`,time,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,time,cpu,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,time,disk,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,time,mem,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value)
     fmt.Println(json)
+
+    span.SetMeta("json", json)
+
     return json
 }
 
