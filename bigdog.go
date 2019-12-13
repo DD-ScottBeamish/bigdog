@@ -110,14 +110,12 @@ func initializeHosts() {
                 client = &http.Client{}
                 resp, err = client.Do(req)
                 if err != nil {
-                    span.LogFields(logs.Error(err))
                     return
                 }
                 defer resp.Body.Close()   
 
                 fmt.Println("response Status:", resp.Status)
                 fmt.Println("response Headers:", resp.Header)
-                span.LogFields(logs.String("http.status", resp.Status))
 
                 body, _ := ioutil.ReadAll(resp.Body)
                 fmt.Println("response Body:", string(body))
