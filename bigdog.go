@@ -11,9 +11,6 @@ import (
     "bytes"
     "os"
     "encoding/json"
-    ddtrace "github.com/DataDog/dd-trace-go/opentracing"
-    opentracing "github.com/opentracing/opentracing-go"
-    logs "github.com/opentracing/opentracing-go/log"
 )
 
 const (
@@ -71,9 +68,6 @@ func getJson(url string, target interface{}) error {
 }
 
 func initializeHosts() {
-    // Add Datadog Tracing
-    span := opentracing.StartSpan("initializeHosts()")
-    defer span.Finish()
 
     //fmt.Fprintf(w, "Creating %s!", r.URL.Path[1:])
     fmt.Println("Building hosts...")
@@ -82,13 +76,10 @@ func initializeHosts() {
     getJson(alphadogApiUrl, container)
     fmt.Println("Container Number: " + strconv.Itoa(container.Count))
 
-    span.LogFields(logs.Int("container.number", container.Count))
-
     // convert environment variable host count to int
     hostCount,err  := strconv.Atoi(totalHosts)
     if err != nil {
         fmt.Println("Error")
-        span.LogFields(logs.Error(err))
     }
     
     go func() {
@@ -99,8 +90,6 @@ func initializeHosts() {
             tags := []Tag {Tag{name: "role", value:role}, Tag{name:"cloud_provider", value:cp}}
             newHost := Host{name: name, tags: tags, tagged: false}
             
-            span.LogFields(logs.String("host.name", name))
-
             hosts = append(hosts,newHost)
             go func(host *Host){
                 // Add host tags
@@ -132,7 +121,6 @@ func initializeHosts() {
 
                 body, _ := ioutil.ReadAll(resp.Body)
                 fmt.Println("response Body:", string(body))
-                span.LogFields(logs.String("http.body", string(body)))
 
             }(&newHost)
         }
@@ -140,21 +128,6 @@ func initializeHosts() {
 }
 
 func main() {
-    // create a Tracer configuration
-    config := ddtrace.NewConfiguration()
-    config.ServiceName = "bigdog"
-    config.AgentHostname = "dd-agent"
-
-    // initialize a Tracer and ensure a graceful shutdown
-    // using the `closer.Close()`
-    tracer, closer, err := ddtrace.NewTracer(config)
-    if err != nil {
-        // handle the configuration error
-    }
-    defer closer.Close()
-
-    // set the Datadog tracer as a GlobalTracer
-    opentracing.SetGlobalTracer(tracer)
 
     rand.Seed(time.Now().Unix()) // Set up a random picker for tags
      // Start a host check in process. We'll check in every CheckInInterval seconds 
@@ -170,9 +143,7 @@ func random(min, max int) int {
 
 // Return Host Metrics JSON
 func hostMetrics(host *Host, time int32) string {
-    span := opentracing.StartSpan("hostMetrics()")
-    defer span.Finish()
-
+    
     cpu := random(BigDogMinCPU,BigDogMaxCPU)
     disk := random(BigDogMinDisk,BigDogMaxDisk)
     mem := random(BigDogMinMem,BigDogMaxMem)
@@ -210,16 +181,12 @@ func hostMetrics(host *Host, time int32) string {
     }`,time,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,time,cpu,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,time,disk,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,time,mem,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value)
     fmt.Println(json)
 
-    span.LogFields(logs.String("json", json))
-
     return json
 }
 
 // Lets just run this for. ev. er.
 func hostCheckIn() {
-    span := opentracing.StartSpan("hostCheckIn()")
-    defer span.Finish()
-
+    
     fmt.Println("Host Check in!")
     currentTime := int32(time.Now().Unix())
     for index, _ := range hosts { 
@@ -233,7 +200,6 @@ func hostCheckIn() {
             client := &http.Client{}
             resp, err := client.Do(req)
             if err != nil {
-                span.LogFields(logs.Error(err))
                 return
             }
             defer resp.Body.Close()
@@ -242,8 +208,6 @@ func hostCheckIn() {
             fmt.Println("response Headers:", resp.Header)
             body, _ := ioutil.ReadAll(resp.Body)
             fmt.Println("response Body:", string(body))
-
-            span.LogFields(logs.String("Resonse Body", string(body)))
             
         }(index)
         if(math.Mod(float64(index), 100) == 0) {
