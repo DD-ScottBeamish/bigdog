@@ -1,4 +1,4 @@
-## Alphadog
+## Bigdog
 JSON/REST API server used issue a container count.  Bigdog calls Alphadog to to scale the number of hosts each instance needs to provision.
 
 #### golang container used to host alphadog
