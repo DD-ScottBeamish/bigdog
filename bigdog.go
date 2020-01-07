@@ -54,7 +54,6 @@ var (
     metricApiUrl = DatadogMetricAPI+"?api_key="+datadogAPIKey+"&application_key="+datadogAppKey
     tagApiUrl = DatadogTagAPI
     myClient = &http.Client{Timeout: 10 * time.Second}
-    alphadogApiUrl = "http://alphadog:8080/getcount"
 )
 
 func getJson(url string, target interface{}) error {
