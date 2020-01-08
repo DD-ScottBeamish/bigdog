@@ -44,8 +44,8 @@ type Container struct {
 }
 
 var (
-    datadogAPIKey = "071b28ab10aab825403e65e436040954"
-    datadogAppKey = "12beb00fa0ffcdf04d8954de8fb626b69b5e0c0d"
+    datadogAPIKey = ""
+    datadogAppKey = ""
     totalHosts = "200"
     hosts []Host
     operatingSystems = [...]string {"tinyOS", "rtos", "lynxOS", "RTLinux", "VxWorks", "OSE", "QNX"}
