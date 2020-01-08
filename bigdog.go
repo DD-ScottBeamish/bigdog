@@ -9,7 +9,6 @@ import (
     "math/rand"
     "io/ioutil"
     "bytes"
-    "os"
     "encoding/json"
 )
 
@@ -45,12 +44,13 @@ type Container struct {
 }
 
 var (
-    datadogAPIKey = os.Getenv("API_KEY")
-    datadogAppKey = os.Getenv("APP_KEY")
-    totalHosts = os.Getenv("HOST_COUNT")
+    datadogAPIKey = "071b28ab10aab825403e65e436040954"
+    datadogAppKey = "12beb00fa0ffcdf04d8954de8fb626b69b5e0c0d"
+    totalHosts = "200"
     hosts []Host
-    services = [...]string {"redis", "cassandra", "mongodb", "nginx", "rabbitmq", "consul", "kafka", "elasticsearch"}
-    cloudProviders = [...]string {"aws", "gcp", "azure"}
+    operatingSystems = [...]string {"tinyOS", "rtos", "lynxOS", "RTLinux", "VxWorks", "OSE", "QNX"}
+    osVersions = [...]string {"1.1.0", "1.1.1", "1.2.0"}
+    countries = [...]string {"USA", "France", "Germany", "Japan", "China", "Sweden", "Canada", "Brazil"}
     metricApiUrl = DatadogMetricAPI+"?api_key="+datadogAPIKey+"&application_key="+datadogAppKey
     tagApiUrl = DatadogTagAPI
     myClient = &http.Client{Timeout: 10 * time.Second}
@@ -71,11 +71,6 @@ func initializeHosts() {
     //fmt.Fprintf(w, "Creating %s!", r.URL.Path[1:])
     fmt.Println("Building hosts...")
 
-    container := &Container{}
-    getJson(alphadogApiUrl, container)
-    fmt.Println("Container Number: " + strconv.Itoa(container.Count))
-
-    // convert environment variable host count to int
     hostCount,err  := strconv.Atoi(totalHosts)
     if err != nil {
         fmt.Println("Error")
@@ -83,16 +78,17 @@ func initializeHosts() {
     
     go func() {
         for i := 0; i < hostCount; i++ {
-            name := "bigdog_"+(strconv.Itoa(hostCount*container.Count-i))
-            role := services[rand.Intn(len(services))]
-            cp := cloudProviders[rand.Intn(len(cloudProviders))]
-            tags := []Tag {Tag{name: "role", value:role}, Tag{name:"cloud_provider", value:cp}}
+            name := "bigdog_"+strconv.Itoa(i)
+            operatingSystem := operatingSystems[rand.Intn(len(operatingSystems))]
+            osVersion := osVersions[rand.Intn(len(osVersions))]
+            country := countries[rand.Intn(len(countries))]
+            tags := []Tag {Tag{name: "os", value:operatingSystem}, Tag{name:"os_version", value:osVersion}, Tag{name:"country", value:country}}
             newHost := Host{name: name, tags: tags, tagged: false}
             
             hosts = append(hosts,newHost)
             go func(host *Host){
                 // Add host tags
-                var jsonStr = []byte(fmt.Sprintf(`{"tags" : ["cloud_provider:%s", "role:%s"]}`,host.tags[1].value,host.tags[0].value))
+                var jsonStr = []byte(fmt.Sprintf(`{"tags" : ["country:%s", "os_version:%s", "os:%s"]}`, host.tags[2].value, host.tags[1].value,host.tags[0].value))
                 apiUrl := tagApiUrl+host.name+"?api_key="+datadogAPIKey+"&application_key="+datadogAppKey
 
                 fmt.Println("Deleting Host Tags for "+host.name)
@@ -151,31 +147,31 @@ func hostMetrics(host *Host, time int32) string {
           "points":[[%d,0]],
           "type":"gauge",
           "host":"%s",
-          "tags":["%s:%s","%s:%s"]
+          "tags":["%s:%s","%s:%s","%s:%s"]
         },
         {
           "metric":"system.cpu.user",
           "points":[[%d,%d]],
           "type":"gauge",
           "host":"%s",
-          "tags":["%s:%s","%s:%s"]
+          "tags":["%s:%s","%s:%s","%s:%s"]
         },
         {
           "metric":"system.disk.used",
           "points":[[%d,%d]],
           "type":"gauge",
           "host":"%s",
-          "tags":["%s:%s","%s:%s"]
+          "tags":["%s:%s","%s:%s","%s:%s"]
         },
         {
           "metric":"system.mem.used",
           "points":[[%d,%d]],
           "type":"gauge",
           "host":"%s",
-          "tags":["%s:%s","%s:%s"]
+          "tags":["%s:%s","%s:%s","%s:%s"]
         }
     ]
-    }`,time,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,time,cpu,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,time,disk,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,time,mem,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value)
+    }`,time,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,host.tags[2].name,host.tags[2].value,time,cpu,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,host.tags[2].name,host.tags[2].value,time,disk,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,host.tags[2].name,host.tags[2].value,time,mem,host.name,host.tags[0].name,host.tags[0].value,host.tags[1].name,host.tags[1].value,host.tags[2].name,host.tags[2].value)
     fmt.Println(json)
 
     return json
